@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlogHub - Modern Blog Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Georgia', serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+        .posts-list {
+            display: grid;
+            gap: 30px;
+        }
+        .post-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        .post-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+        .post-card h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .post-meta {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+        }
+        .post-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .post-excerpt {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        .category-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        .featured {
+            border-left: 4px solid #ffc107;
+            background: linear-gradient(to right, rgba(255, 193, 7, 0.05), white);
+        }
+        .featured-badge {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .post-form {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        @media (max-width: 600px) {
+            header h1 { font-size: 32px; }
+            .post-card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📝 BlogHub</h1>
+        <p>Share Your Ideas with the World</p>
+    </header>
+
+    <div class="container">
+        <div class="post-form">
+            <h3>Write a New Post</h3>
+            <form onsubmit="addPost(event)">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="title" required>
+                </div>
+                <div class="form-group">
+                    <label>Excerpt</label>
+                    <input type="text" id="excerpt" placeholder="Brief summary of your post">
+                </div>
+                <div class="form-group">
+                    <label>Content</label>
+                    <textarea id="content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" id="category" value="General">
+                </div>
+                <button type="submit">Publish Post</button>
+            </form>
+        </div>
+
+        <div class="posts-list" id="postsList">
+            <!-- Posts will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/posts/';
+
+        async function loadPosts() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                const posts = data.results || data;
+                renderPosts(posts);
+            } catch (error) {
+                console.error('Error loading posts:', error);
+            }
+        }
+
+        function renderPosts(posts) {
+            const container = document.getElementById('postsList');
+            container.innerHTML = '';
+            
+            posts.forEach(post => {
+                const date = new Date(post.created_at).toLocaleDateString();
+                const featuredClass = post.featured ? 'featured' : '';
+                const featuredBadge = post.featured ? '<span class="featured-badge">⭐ Featured</span>' : '';
+                
+                const postDiv = document.createElement('article');
+                postDiv.className = 'post-card ' + featuredClass;
+                postDiv.innerHTML = `
+                    <h2>${post.title} ${featuredBadge}</h2>
+                    <div class="post-meta">
+                        <span>📅 ${date}</span>
+                        <span>👤 ${post.author}</span>
+                    </div>
+                    <span class="category-tag">${post.category}</span>
+                    <p class="post-excerpt">${post.excerpt}</p>
+                    <button onclick="deletePost('${post.slug}')">Delete Post</button>
+                `;
+                container.appendChild(postDiv);
+            });
+        }
+
+        async function addPost(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('title').value;
+            const slug = title.toLowerCase().replace(/\s+/g, '-');
+            const excerpt = document.getElementById('excerpt').value;
+            const content = document.getElementById('content').value;
+            const category = document.getElementById('category').value;
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, slug, excerpt, content, category })
+                });
+                
+                if (response.ok) {
+                    document.querySelector('.post-form form').reset();
+                    loadPosts();
+                }
+            } catch (error) {
+                console.error('Error adding post:', error);
+            }
+        }
+
+        async function deletePost(slug) {
+            try {
+                const response = await fetch(`${API_URL}${slug}/`, { method: 'DELETE' });
+                if (response.ok) loadPosts();
+            } catch (error) {
+                console.error('Error deleting post:', error);
+            }
+        }
+
+        loadPosts();
+    </script>
+</body>
+</html>

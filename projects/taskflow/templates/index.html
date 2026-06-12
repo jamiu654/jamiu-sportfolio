@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Task Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .task-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .task-form input, .task-form select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .task-form input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+        }
+        .task-form button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .task-form button:hover {
+            background: #764ba2;
+        }
+        .tasks-container {
+            display: grid;
+            gap: 15px;
+        }
+        .task-item {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .task-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+            border-left-color: #4caf50;
+        }
+        .task-info h3 {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .task-meta {
+            font-size: 12px;
+            color: #999;
+        }
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .task-actions button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-complete {
+            background: #4caf50;
+            color: white;
+        }
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .stat-card p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        @media (max-width: 600px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .task-form { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 TaskFlow</h1>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <h3 id="totalCount">0</h3>
+                <p>Total Tasks</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="pendingCount">0</h3>
+                <p>Pending</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="inProgressCount">0</h3>
+                <p>In Progress</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="completedCount">0</h3>
+                <p>Completed</p>
+            </div>
+        </div>
+
+        <div class="task-form">
+            <input type="text" id="taskTitle" placeholder="Add a new task...">
+            <select id="taskPriority">
+                <option value="low">Low Priority</option>
+                <option value="medium" selected>Medium Priority</option>
+                <option value="high">High Priority</option>
+            </select>
+            <button onclick="addTask()">Add Task</button>
+        </div>
+
+        <div class="tasks-container" id="tasksContainer">
+            <!-- Tasks will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/tasks/';
+
+        async function loadTasks() {
+            try {
+                const response = await fetch(API_URL);
+                const tasks = await response.json();
+                renderTasks(tasks.results || tasks);
+                loadStats();
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+
+        function renderTasks(tasks) {
+            const container = document.getElementById('tasksContainer');
+            container.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = 'task-item' + (task.status === 'completed' ? ' completed' : '');
+                taskDiv.innerHTML = `
+                    <div class="task-info">
+                        <h3>${task.title}</h3>
+                        <div class="task-meta">
+                            Priority: ${task.priority.toUpperCase()} | Status: ${task.status.replace('_', ' ').toUpperCase()}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        ${task.status !== 'completed' ? `<button class="btn-complete" onclick="updateTask(${task.id}, 'completed')">✓ Complete</button>` : ''}
+                        <button class="btn-delete" onclick="deleteTask(${task.id})">✕ Delete</button>
+                    </div>
+                `;
+                container.appendChild(taskDiv);
+            });
+        }
+
+        async function addTask() {
+            const title = document.getElementById('taskTitle').value;
+            const priority = document.getElementById('taskPriority').value;
+            
+            if (!title.trim()) return;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, priority, status: 'pending' })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('taskTitle').value = '';
+                    loadTasks();
+                }
+            } catch (error) {
+                console.error('Error adding task:', error);
+            }
+        }
+
+        async function updateTask(id, status) {
+            try {
+                const response = await fetch(`${API_URL}${id}/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                }
+            } catch (error) {
+                console.error('Error updating task:', error);
+            }
+        }
+
+        async function deleteTask(id) {
+            try {
+                const response = await fetch(`${API_URL}${id}/`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}stats/`);
+                const stats = await response.json();
+                document.getElementById('totalCount').textContent = stats.total;
+                document.getElementById('pendingCount').textContent = stats.pending;
+                document.getElementById('inProgressCount').textContent = stats.in_progress;
+                document.getElementById('completedCount').textContent = stats.completed;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load tasks on page load
+        loadTasks();
+    </script>
+</body>
+</html>
